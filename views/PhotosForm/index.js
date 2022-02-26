@@ -82,7 +82,7 @@ const PhotosForm = ({ currentPhotos, updatePhotos, onContinue }) => {
     const forceUpdate = useForceUpdate();
 
     const addPhoto = async () => {
-        const result = await launchImageLibrary({ mediaType: 'photo' });
+        const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.7});
 
         if (result.didCancel) return;
 

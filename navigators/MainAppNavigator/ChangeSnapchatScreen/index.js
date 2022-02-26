@@ -53,7 +53,7 @@ const ChangeSnapchatScreen = ({ navigation, route }) => {
                     behavior={Platform.OS === "ios" ? "padding" : null}
                     style={{
                         width: '100%',
-                        height: '70%',
+                        height: '75%',
                         backgroundColor: 'white',
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20
@@ -111,6 +111,18 @@ const ChangeSnapchatScreen = ({ navigation, route }) => {
                             autoCorrect={false}
                             spellCheck={false}
                         />
+
+                        <Text style={{
+                            textAlign: 'center',
+                            color: 'gray',
+                            marginTop: 20,
+                            paddingHorizontal: 20
+                        }}>
+                            This is NOT your nickname!
+                            Be sure the snapchat username above is correct!
+                            {'\n'}
+                            Otherwise, users will not be able to get in touch with you!
+                        </Text>
 
                         <TouchableOpacity onPress={() => {
                             updateValue(value);

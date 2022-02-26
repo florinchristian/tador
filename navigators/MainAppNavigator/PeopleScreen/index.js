@@ -9,7 +9,8 @@ import {
     Platform,
     ActivityIndicator,
     PermissionsAndroid,
-    Linking
+    Linking,
+    Alert
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -17,6 +18,7 @@ import LoadingPeople from '../../../components/LoadingPeople';
 import PersonView from '../../../components/PersonView';
 
 import Fontisto from 'react-native-vector-icons/Fontisto';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const WIDTH = Dimensions.get('screen').width;
 const HEIGHT = Dimensions.get('screen').height;
@@ -30,10 +32,13 @@ import Geolocation from 'react-native-geolocation-service';
 import { appendToBlacklistPath, createRequestPath, fetchUsersPath, HOST, lookupUserForPeoplesViewPath, fetchRequestsPath, changeModePath, clearRequestsPath, deleteRequestPath } from '../../../constants';
 import { peopleTestData } from '../../../testdata';
 
-import RequestListModal from '../../../components/RequestListModal';
 import SelectModeModal from '../../../components/SelectModeModal';
 
 import { RFPercentage } from 'react-native-responsive-fontsize';
+import FilterSettingsModal from '../../../components/FilterSettingsModal';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import InAppReview from 'react-native-in-app-review';
 
 const PeopleScreen = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
@@ -43,17 +48,20 @@ const PeopleScreen = ({ navigation }) => {
     const [users, setUsers] = useState([]);
     const [index, setIndex] = useState(0);
 
-    const [requests, setRequests] = useState([]);
-    const [requestsAreLoading, setRequestsAreLoading] = useState(true);
-
-    const [requestsModalVisible, setRequestsModalVisible] = useState(false);
-
     const [modeModalVisible, setModeModalVisible] = useState(false);
     const [currentMode, setCurrentMode] = useState('dating');
 
     const [currentPosition, setCurrentPosition] = useState(null);
 
     const [preferredGender, setPreferredGender] = useState(null);
+
+    const [filterModalVisible, setFilterModalVisible] = useState(false);
+
+    const [nearbyDate, setNearbyDate] = useState(false);
+    const [nearbyDtf, setNearbyDtf] = useState(false);
+    const [nearbyFwb, setNearbyFwb] = useState(false);
+
+    const [filterAux, setFilterAux] = useState(1);
 
     const titlesDict = {
         'dating': 'Date',
@@ -63,33 +71,25 @@ const PeopleScreen = ({ navigation }) => {
         'sexting': 'Sexting'
     };
 
+    const saveFilters = (gender, date, dtf, fwb) => {
+        setNearbyDate(date);
+        setNearbyDtf(dtf);
+        setNearbyFwb(fwb);
+        setPreferredGender(gender);
+
+        setFilterModalVisible(false);
+
+        fetchUsers(currentMode, currentPosition, gender, {
+            date: date,
+            dtf: dtf,
+            fwb: fwb
+        });
+    };
+
     const goToReportScreen = userId => {
         navigation.navigate('ReportUserScreen', {
             userId: userId
         });
-    };
-
-    const clearRequests = () => {
-        axios.delete(`http://${HOST}/${clearRequestsPath}`, {
-            params: {
-                userId: getUniqueId()
-            }
-        }).then(result => setRequests([]));
-    };
-
-    const removeRequest = async userId => {
-        await axios.delete(`http://${HOST}/${deleteRequestPath}`, {
-            params: {
-                userId: getUniqueId(),
-                senderUserId: userId
-            }
-        });
-
-        let newRequests = requests.filter(item => item.userId != userId);
-
-        if (newRequests.length == 0) {
-            fetchRequests();
-        } else setRequests(newRequests);
     };
 
     const updateMode = async newMode => {
@@ -109,27 +109,11 @@ const PeopleScreen = ({ navigation }) => {
         setButtonTitle(titlesDict[newMode]);
         setModeModalVisible(false);
 
-        fetchUsers(newMode, currentPosition, preferredGender);
-    };
-
-    const fetchRequests = async () => {
-        setRequestsAreLoading(true);
-
-        const result = await axios.get(`http://${HOST}/${fetchRequestsPath}`, {
-            params: {
-                userId: getUniqueId()
-            }
+        fetchUsers(newMode, currentPosition, preferredGender, {
+            date: nearbyDate,
+            dtf: nearbyDtf,
+            fwb: nearbyFwb
         });
-
-        const response = result.data;
-
-        console.log(response);
-
-        if (response.success) {
-            setRequests(response.data);
-        }
-
-        setRequestsAreLoading(false);
     };
 
     const advanceList = async sign => {
@@ -151,21 +135,27 @@ const PeopleScreen = ({ navigation }) => {
             let newIndex = index + 1;
 
             if (newIndex == users.length) {
-                fetchUsers(currentMode, currentPosition, preferredGender);
+                fetchUsers(currentMode, currentPosition, preferredGender, {
+                    date: nearbyDate,
+                    dtf: nearbyDtf,
+                    fwb: nearbyFwb
+                });
             } else setIndex(newIndex);
         } catch (err) {
             console.log('no users to advance');
         }
     };
 
-    const checkMode = seekingMode => {
-        return seekingMode == 'dating' || seekingMode == 'fwb' || seekingMode == 'dtf';
+    const checkMode = (seekingMode, filters) => {
+        return (seekingMode == 'dating' && filters.date)
+            || (seekingMode == 'fwb' && filters.fwb)
+            || (seekingMode == 'dtf' && filters.dtf);
     };
 
-    const fetchUsers = async (seekingMode, position, gender) => {
+    const fetchUsers = async (seekingMode, position, gender, filters) => {
         setLoading(true);
 
-        if (checkMode(seekingMode) && position == null) {
+        if (checkMode(seekingMode, filters) && position == null) {
             setUsers([]);
             setLoading(false);
             setCurrentPosition(null);
@@ -190,6 +180,11 @@ const PeopleScreen = ({ navigation }) => {
                     position: {
                         x: position.coords.latitude,
                         y: position.coords.longitude
+                    },
+                    userFilters: {
+                        date: filters.date,
+                        dtf: filters.dtf,
+                        fwb: filters.fwb
                     }
                 }
             });
@@ -215,6 +210,16 @@ const PeopleScreen = ({ navigation }) => {
         setCurrentMode(data['seeking']);
         setButtonTitle(titlesDict[data['seeking']]);
         setPreferredGender(data['preferredGender']);
+
+        const date = data['considerDateLocation'] == 1 ? true : false;
+        const dtf = data['considerDtfLocation'] == 1 ? true : false;
+        const fwb = data['considerFwbLocation'] == 1 ? true : false;
+
+        setNearbyDate(date);
+        setNearbyDtf(dtf);
+        setNearbyFwb(fwb);
+
+        setFilterAux(filterAux * -1);
 
         var permission = null;
 
@@ -246,14 +251,86 @@ const PeopleScreen = ({ navigation }) => {
         if (permission == 'granted') {
             Geolocation.getCurrentPosition(async position => {
                 setCurrentPosition(position);
-                fetchUsers(data['seeking'], position, data['preferredGender']);
+                fetchUsers(data['seeking'], position, data['preferredGender'], {
+                    date: date,
+                    dtf: dtf,
+                    fwb: fwb
+                });
             }, error => {
-                fetchRequests(data['seeking'], null);
+                fetchUsers(data['seeking'], null, data['prefferedGender'], {
+                    date: date,
+                    dtf: dtf,
+                    fwb: fwb
+                });
             }, {
                 enableHighAccuracy: true,
                 showLocationDialog: true
             });
-        } else fetchUsers(data['seeking'], null, data['preferredGender']);
+        } else fetchUsers(data['seeking'], null, data['preferredGender'], {
+            date: date,
+            dtf: dtf,
+            fwb: fwb
+        });
+
+        checkStorage();
+    };
+
+    const showReview = async () => {
+        if (InAppReview.isAvailable()) {
+            try {
+                const result = await InAppReview.RequestInAppReview();
+
+                if (result) {
+                    await AsyncStorage.setItem('reviewCounter', String(21));
+                }
+            } catch (err) {
+                console.log(err);
+            }
+        }
+    }
+
+    const checkStorage = async () => {
+        const instaShown = await AsyncStorage.getItem('instaShown');
+
+        console.log(instaShown);
+
+        if (instaShown == null) {
+            Alert.alert(
+                'Stay Tuned!', 
+                'You can follow me on @florinchristian.dev to find out about the latest news about Tador!',
+                [
+                    {
+                        text: 'Ok',
+                        style: 'cancel',
+                        onPress: () => Linking.openURL('https://www.instagram.com/florinchristian.dev/')
+                    },
+                    {
+                        text: 'Dismiss',
+                        style: 'destructive',
+                        onPress: () => {}
+                    }
+                ]
+            )
+
+            await AsyncStorage.setItem('instaShown', 'shown');
+        }
+
+        const reviewCounter = await AsyncStorage.getItem('reviewCounter');
+
+        console.log(reviewCounter);
+
+        if (reviewCounter == null) {
+            await AsyncStorage.setItem('reviewCounter', String(1));
+        } else {
+            let count = parseInt(reviewCounter);
+
+            if (count == 20) {
+                showReview();
+            } else {
+                if (count < 20)
+                    await AsyncStorage.setItem('reviewCounter', String(count + 1));
+            }
+        }
     };
 
     useEffect(() => {
@@ -294,16 +371,15 @@ const PeopleScreen = ({ navigation }) => {
                         />
                     </TouchableOpacity>
 
-                    <TouchableOpacity onPress={ async () => {
-                        await fetchRequests();
-                        setRequestsModalVisible(true);
+                    <TouchableOpacity onPress={() => {
+                        setFilterModalVisible(true);
                     }} style={{
                         alignSelf: 'center'
                     }}>
-                        <Fontisto
-                            name='nav-icon-list-a'
+                        <Ionicons
+                            name='ios-settings-outline'
                             color={'white'}
-                            size={RFPercentage(3)}
+                            size={RFPercentage(5)}
                         />
                     </TouchableOpacity>
                 </View>
@@ -314,17 +390,17 @@ const PeopleScreen = ({ navigation }) => {
                     updateChoice={newValue => updateMode(newValue)}
                 />
 
-                <RequestListModal
-                    onReportPress={userId => {
-                        setRequestsModalVisible(false);
-                        goToReportScreen(userId);
+                <FilterSettingsModal
+                    toggle={filterAux}
+                    visible={filterModalVisible}
+                    genderValue={preferredGender}
+                    dateValue={nearbyDate}
+                    dtfValue={nearbyDtf}
+                    fwbValue={nearbyFwb}
+                    saveFilters={saveFilters}
+                    closeModal={() => {
+                        setFilterModalVisible(false);
                     }}
-                    visible={requestsModalVisible}
-                    requests={requests}
-                    loading={requestsAreLoading}
-                    removeRequest={removeRequest}
-                    clearRequests={clearRequests}
-                    closeModal={() => setRequestsModalVisible(false)}
                 />
 
                 {users.length ? (
@@ -353,7 +429,11 @@ const PeopleScreen = ({ navigation }) => {
                                 justifyContent: 'center',
                                 alignItems: 'center'
                             }}>
-                                {(currentPosition == null && checkMode(currentMode)) ? (
+                                {(currentPosition == null && checkMode(currentMode, {
+                                    date: nearbyDate,
+                                    dtf: nearbyDtf,
+                                    fwb: nearbyFwb
+                                })) ? (
                                     <View style={{
                                         flex: 1,
                                         justifyContent: 'center',

@@ -180,7 +180,7 @@ const SettingsScreen = ({ navigation }) => {
     };
 
     const uploadImage = async () => {
-        const pickerResult = await launchImageLibrary({ mediaType: 'photo' });
+        const pickerResult = await launchImageLibrary({ mediaType: 'photo', quality: 0.7});
 
         if (!pickerResult.didCancel) {
             const data = new FormData();
@@ -293,7 +293,7 @@ const SettingsScreen = ({ navigation }) => {
                     </View>
                 </View>
 
-                <RadioSelector
+                {/* <RadioSelector
                     onValueChange={updatePreferredGender}
                     title={'Show me only'}
                     selectedValue={preferredGender}
@@ -303,7 +303,7 @@ const SettingsScreen = ({ navigation }) => {
                             'female': 'Females'
                         }
                     }
-                />
+                /> */}
 
                 {canChangeSnapchat ? (
                     <View>

@@ -13,11 +13,14 @@ import { createStackNavigator } from '@react-navigation/stack'
 
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Feather from 'react-native-vector-icons/Feather';
+import Fontisto from 'react-native-vector-icons/Fontisto';
 
 import PeopleScreen from './PeopleScreen';
 import SettingsScreen from './SettingsScreen';
 import ChangeSnapchatScreen from './ChangeSnapchatScreen';
 import ReportUserScreen from './ReportUserScreen';
+import RequestsScreen from './RequestsScreen';
+import { RFPercentage } from 'react-native-responsive-fontsize';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -27,6 +30,15 @@ const SettingsStack = () => {
         <Stack.Navigator screenOptions={{headerShown: false}}>
             <Stack.Screen name='SettingsScreen' component={SettingsScreen}/>
             <Stack.Screen name='ChangeSnapchatScreen' component={ChangeSnapchatScreen}/>
+        </Stack.Navigator>
+    );
+};
+
+const RequestsStack = () => {
+    return(
+        <Stack.Navigator screenOptions={{headerShown: false}}>
+            <Stack.Screen name='RequestsScreen' component={RequestsScreen}/>
+            <Stack.Screen name='ReportUserScreen' component={ReportUserScreen}/>
         </Stack.Navigator>
     );
 };
@@ -43,7 +55,8 @@ const PeopleStack = () => {
 const TabBar = ({ state, descriptors, navigation }) => {
     const statusBarStyles = {
         'PeopleStack': 'light-content',
-        'SettingsStack': 'dark-content'
+        'SettingsStack': 'dark-content',
+        'RequestsStack': 'dark-content'
     };
 
     const descriptions = {
@@ -64,7 +77,7 @@ const TabBar = ({ state, descriptors, navigation }) => {
 
                     var iconColor = 'gray';
                     var icon = null;
-                    var iconSize = 30;
+                    var iconSize = RFPercentage(4.3);
 
                     if (focused) {
                         iconColor = '#05d6d9';
@@ -78,6 +91,17 @@ const TabBar = ({ state, descriptors, navigation }) => {
                                 size={iconSize}
                             />
                         );
+                    }
+
+                    if (label == 'RequestsStack') {
+                        icon = <Fontisto
+                            name='nav-icon-list-a'
+                            color={iconColor}
+                            size={RFPercentage(3.2)}
+                            style={{
+                                alignSelf: 'center'
+                            }}
+                        />
                     }
 
                     if (label == 'SettingsStack') {
@@ -127,6 +151,7 @@ const MainAppNavigator = () => {
         <NavigationContainer>
             <Tab.Navigator tabBar={props => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
                 <Tab.Screen name='PeopleStack' component={PeopleStack} />
+                <Tab.Screen name='RequestsStack' component={RequestsStack} />
                 <Tab.Screen name='SettingsStack' component={SettingsStack} />
             </Tab.Navigator>
         </NavigationContainer>

@@ -46,6 +46,18 @@ const SnapchatForm = ({ currentSnapchat, updateSnapchat, onContinue}) => {
                     autoCorrect={false}
                     spellCheck={false}
                 />
+
+                <Text style={{
+                    textAlign: 'center',
+                    color: 'gray',
+                    marginTop: 20,
+                    paddingHorizontal: 20
+                }}>
+                    This is NOT your nickname!
+                    Be sure the snapchat username above is correct!
+                    {'\n'}
+                    Otherwise, users will not be able to get in touch with you!
+                </Text>
             </View>
 
             <TouchableOpacity disabled={canContinue? false : true} onPress={onContinue} activeOpacity={0.5} style={[styles.continueBtn, {

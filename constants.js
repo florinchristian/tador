@@ -1,5 +1,5 @@
 const HOST = '217.182.78.51:40389';
-const BuildNumber = 1;
+const BuildNumber = 2;
 const checkExistingAccountPath = 'checkExistingAccount';
 const registerPath = 'registerUser';
 const lookupUserForPeoplesViewPath = 'lookupUserForPeoplesView';
@@ -18,6 +18,7 @@ const deleteRequestPath = 'deleteRequest';
 const reportUserPath = 'reportUser';
 const updatePreferredGenderPath = 'updatePreferredGender';
 const deleteAccountPath = 'deleteUser';
+const updateFiltersPath = 'updateUserFilters';
 
 export {
     BuildNumber,
@@ -39,5 +40,6 @@ export {
     deleteRequestPath,
     reportUserPath,
     updatePreferredGenderPath,
-    deleteAccountPath
+    deleteAccountPath,
+    updateFiltersPath
 };
